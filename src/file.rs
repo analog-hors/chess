@@ -1,5 +1,4 @@
 use crate::error::Error;
-use std::mem::transmute;
 use std::str::FromStr;
 
 /// Describe a file (column) on a chess board
@@ -34,7 +33,7 @@ impl File {
     /// Convert a `usize` into a `File` (the inverse of to_index).  If i > 7, wrap around.
     #[inline]
     pub fn from_index(i: usize) -> File {
-        unsafe { transmute((i as u8) & 7) }
+        ALL_FILES[i & 7]
     }
 
     /// Go one file to the left.  If impossible, wrap around.

@@ -17,7 +17,6 @@ use crate::zobrist::Zobrist;
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::hash::{Hash, Hasher};
-use std::mem;
 use std::str::FromStr;
 
 /// A representation of a chess board.  That's why you're here, right?
@@ -861,11 +860,9 @@ impl Board {
     /// ```
     #[inline]
     pub fn make_move_new(&self, m: ChessMove) -> Board {
-        let mut result = mem::MaybeUninit::<Board>::uninit();
-        unsafe {
-            self.make_move(m, &mut *result.as_mut_ptr());
-            result.assume_init()
-        }
+        let mut result = *self;
+        self.make_move(m, &mut result);
+        result
     }
 
     /// Make a chess move onto an already allocated `Board`.

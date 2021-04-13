@@ -1,5 +1,3 @@
-use std::hint::unreachable_unchecked;
-
 use crate::bitboard::{BitBoard, EMPTY};
 use crate::color::Color;
 use crate::file::File;
@@ -94,15 +92,9 @@ impl CastleRights {
         *self as usize
     }
 
-    /// Convert `usize` to `CastleRights`.  Panic if invalid number.
+    /// Convert `usize` to `CastleRights`. Wrap on overflow (>= 3)
     pub fn from_index(i: usize) -> CastleRights {
-        match i {
-            0 => CastleRights::NoRights,
-            1 => CastleRights::KingSide,
-            2 => CastleRights::QueenSide,
-            3 => CastleRights::Both,
-            _ => unsafe { unreachable_unchecked() },
-        }
+        ALL_CASTLE_RIGHTS[i & 3]
     }
 
     /// Which rooks can we "guarantee" we haven't moved yet?
@@ -144,12 +136,12 @@ impl CastleRights {
     }
 
     /// Given a square of a rook, which side is it on?
-    /// Note: It is invalid to pass in a non-rook square.  The code may panic.
+    /// Panics on a non-rook square.
     pub fn rook_square_to_castle_rights(square: Square) -> CastleRights {
         match square.get_file() {
             File::A => CastleRights::QueenSide,
             File::H => CastleRights::KingSide,
-            _ => unsafe { unreachable_unchecked() },
+            _ => panic!("Non-rook square {}", square),
         }
     }
 }
