@@ -5,6 +5,9 @@ use crate::movegen::{MoveList, SquareAndBitBoard};
 use crate::piece::Piece;
 use crate::square::Square;
 
+//NOTE: Many of these checked pushes to the MoveList used to be unchecked, but I don't trust that
+//the Board struct can actually uphold its invariants
+
 use crate::magic::{
     between, get_adjacent_files, get_bishop_moves, get_bishop_rays, get_king_moves,
     get_knight_moves, get_pawn_attacks, get_pawn_moves, get_rank, get_rook_moves, get_rook_rays,
@@ -39,9 +42,7 @@ pub trait PieceType {
         for src in pieces & !pinned {
             let moves = Self::pseudo_legals(src, color, *combined, mask) & check_mask;
             if moves != EMPTY {
-                unsafe {
-                    movelist.push_unchecked(SquareAndBitBoard::new(src, moves, false));
-                }
+                movelist.push(SquareAndBitBoard::new(src, moves, false));
             }
         }
 
@@ -49,9 +50,7 @@ pub trait PieceType {
             for src in pieces & pinned {
                 let moves = Self::pseudo_legals(src, color, *combined, mask) & line(src, ksq);
                 if moves != EMPTY {
-                    unsafe {
-                        movelist.push_unchecked(SquareAndBitBoard::new(src, moves, false));
-                    }
+                    movelist.push(SquareAndBitBoard::new(src, moves, false));
                 }
             }
         }
@@ -150,13 +149,11 @@ impl PieceType for PawnType {
         for src in pieces & !pinned {
             let moves = Self::pseudo_legals(src, color, *combined, mask) & check_mask;
             if moves != EMPTY {
-                unsafe {
-                    movelist.push_unchecked(SquareAndBitBoard::new(
-                        src,
-                        moves,
-                        src.get_rank() == color.to_seventh_rank(),
-                    ));
-                }
+                movelist.push(SquareAndBitBoard::new(
+                    src,
+                    moves,
+                    src.get_rank() == color.to_seventh_rank(),
+                ));
             }
         }
 
@@ -164,13 +161,11 @@ impl PieceType for PawnType {
             for src in pieces & pinned {
                 let moves = Self::pseudo_legals(src, color, *combined, mask) & line(ksq, src);
                 if moves != EMPTY {
-                    unsafe {
-                        movelist.push_unchecked(SquareAndBitBoard::new(
-                            src,
-                            moves,
-                            src.get_rank() == color.to_seventh_rank(),
-                        ));
-                    }
+                    movelist.push(SquareAndBitBoard::new(
+                        src,
+                        moves,
+                        src.get_rank() == color.to_seventh_rank(),
+                    ));
                 }
             }
         }
@@ -182,13 +177,11 @@ impl PieceType for PawnType {
             for src in rank & files & pieces {
                 let dest = ep_sq.uforward(color);
                 if PawnType::legal_ep_move(board, src, dest) {
-                    unsafe {
-                        movelist.push_unchecked(SquareAndBitBoard::new(
-                            src,
-                            BitBoard::from_square(dest),
-                            false,
-                        ));
-                    }
+                    movelist.push(SquareAndBitBoard::new(
+                        src,
+                        BitBoard::from_square(dest),
+                        false,
+                    ));
                 }
             }
         }
@@ -244,18 +237,14 @@ impl PieceType for KnightType {
             for src in pieces & !pinned {
                 let moves = Self::pseudo_legals(src, color, *combined, mask & check_mask);
                 if moves != EMPTY {
-                    unsafe {
-                        movelist.push_unchecked(SquareAndBitBoard::new(src, moves, false));
-                    }
+                    movelist.push(SquareAndBitBoard::new(src, moves, false));
                 }
             }
         } else {
             for src in pieces & !pinned {
                 let moves = Self::pseudo_legals(src, color, *combined, mask);
                 if moves != EMPTY {
-                    unsafe {
-                        movelist.push_unchecked(SquareAndBitBoard::new(src, moves, false));
-                    }
+                    movelist.push(SquareAndBitBoard::new(src, moves, false));
                 }
             }
         };
@@ -396,9 +385,7 @@ impl PieceType for KingType {
             }
         }
         if moves != EMPTY {
-            unsafe {
-                movelist.push_unchecked(SquareAndBitBoard::new(ksq, moves, false));
-            }
+            movelist.push(SquareAndBitBoard::new(ksq, moves, false));
         }
     }
 }
