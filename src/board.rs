@@ -205,7 +205,7 @@ impl Board {
     /// ```
     #[inline]
     pub fn color_combined(&self, color: Color) -> &BitBoard {
-        unsafe { self.color_combined.get_unchecked(color.to_index()) }
+        &self.color_combined[color.to_index()]
     }
 
     /// Give me the `Square` the `color` king is on.
@@ -240,7 +240,7 @@ impl Board {
     /// ```
     #[inline]
     pub fn pieces(&self, piece: Piece) -> &BitBoard {
-        unsafe { self.pieces.get_unchecked(piece.to_index()) }
+        &self.pieces[piece.to_index()]
     }
 
     /// Grab the `CastleRights` for a particular side.
@@ -279,7 +279,7 @@ impl Board {
     /// ```
     #[inline]
     pub fn castle_rights(&self, color: Color) -> CastleRights {
-        unsafe { *self.castle_rights.get_unchecked(color.to_index()) }
+        self.castle_rights[color.to_index()]
     }
 
     /// Add castle rights for a particular side.  Note: this can create an invalid position.
@@ -289,10 +289,7 @@ impl Board {
     )]
     #[inline]
     pub fn add_castle_rights(&mut self, color: Color, add: CastleRights) {
-        unsafe {
-            *self.castle_rights.get_unchecked_mut(color.to_index()) =
-                self.castle_rights(color).add(add);
-        }
+        self.castle_rights[color.to_index()] = self.castle_rights(color).add(add);
     }
 
     /// Remove castle rights for a particular side.
@@ -312,10 +309,7 @@ impl Board {
     )]
     #[inline]
     pub fn remove_castle_rights(&mut self, color: Color, remove: CastleRights) {
-        unsafe {
-            *self.castle_rights.get_unchecked_mut(color.to_index()) =
-                self.castle_rights(color).remove(remove);
-        }
+        self.castle_rights[color.to_index()] = self.castle_rights(color).remove(remove);
     }
 
     /// Who's turn is it?
@@ -433,12 +427,10 @@ impl Board {
 
     /// Add or remove a piece from the bitboards in this struct.
     fn xor(&mut self, piece: Piece, bb: BitBoard, color: Color) {
-        unsafe {
-            *self.pieces.get_unchecked_mut(piece.to_index()) ^= bb;
-            *self.color_combined.get_unchecked_mut(color.to_index()) ^= bb;
-            self.combined ^= bb;
-            self.hash ^= Zobrist::piece(piece, bb.to_square(), color);
-        }
+        self.pieces[piece.to_index()] ^= bb;
+        self.color_combined[color.to_index()] ^= bb;
+        self.combined ^= bb;
+        self.hash ^= Zobrist::piece(piece, bb.to_square(), color);
     }
 
     /// For a chess UI: set a piece on a particular square.
@@ -968,12 +960,8 @@ impl Board {
         } else if castles {
             let my_backrank = self.side_to_move.to_my_backrank();
             let index = dest.get_file().to_index();
-            let start = BitBoard::set(my_backrank, unsafe {
-                *CASTLE_ROOK_START.get_unchecked(index)
-            });
-            let end = BitBoard::set(my_backrank, unsafe {
-                *CASTLE_ROOK_END.get_unchecked(index)
-            });
+            let start = BitBoard::set(my_backrank, CASTLE_ROOK_START[index]);
+            let end = BitBoard::set(my_backrank, CASTLE_ROOK_END[index]);
             result.xor(Piece::Rook, start, self.side_to_move);
             result.xor(Piece::Rook, end, self.side_to_move);
         }

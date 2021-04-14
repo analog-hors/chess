@@ -60,21 +60,17 @@ impl CastleRights {
     }
 
     pub fn square_to_castle_rights(color: Color, sq: Square) -> CastleRights {
-        CastleRights::from_index(unsafe {
-            *CASTLES_PER_SQUARE
-                .get_unchecked(color.to_index())
-                .get_unchecked(sq.to_index())
-        } as usize)
+        CastleRights::from_index(CASTLES_PER_SQUARE[color.to_index()][sq.to_index()] as usize)
     }
 
     /// What squares need to be empty to castle kingside?
     pub fn kingside_squares(&self, color: Color) -> BitBoard {
-        unsafe { *KINGSIDE_CASTLE_SQUARES.get_unchecked(color.to_index()) }
+        KINGSIDE_CASTLE_SQUARES[color.to_index()]
     }
 
     /// What squares need to be empty to castle queenside?
     pub fn queenside_squares(&self, color: Color) -> BitBoard {
-        unsafe { *QUEENSIDE_CASTLE_SQUARES.get_unchecked(color.to_index()) }
+        QUEENSIDE_CASTLE_SQUARES[color.to_index()]
     }
 
     /// Remove castle rights, and return a new `CastleRights`.
