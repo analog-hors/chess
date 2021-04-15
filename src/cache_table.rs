@@ -47,7 +47,13 @@ impl<T: Copy + Clone + PartialEq + PartialOrd> CacheTable<T> {
     /// Add (or overwrite) an entry with the associated hash
     #[inline]
     pub fn add(&mut self, hash: u64, entry: T) {
-        let e = unsafe { self.table.get_unchecked_mut((hash as usize) & self.mask) };
+        //SAFETY: self.table.len() is always power of two,
+        // and self.mask always grabs all the relevant lower bits.
+        debug_assert!(self.table.len().is_power_of_two());
+        debug_assert_eq!(self.table.len(), self.mask - 1);
+        let index = (hash as usize) & self.mask;
+        debug_assert!(index < self.table.len());
+        let e = unsafe { self.table.get_unchecked_mut(index) };
         *e = CacheTableEntry {
             hash: hash,
             entry: entry,
@@ -80,7 +86,13 @@ impl<T: Copy + Clone + PartialEq + PartialOrd> CacheTable<T> {
     /// ```
     #[inline(always)]
     pub fn replace_if<F: Fn(T) -> bool>(&mut self, hash: u64, entry: T, replace: F) {
-        let e = unsafe { self.table.get_unchecked_mut((hash as usize) & self.mask) };
+        //SAFETY: self.table.len() is always power of two,
+        // and self.mask always grabs all the relevant lower bits.
+        debug_assert!(self.table.len().is_power_of_two());
+        debug_assert_eq!(self.table.len(), self.mask - 1);
+        let index = (hash as usize) & self.mask;
+        debug_assert!(index < self.table.len());
+        let e = unsafe { self.table.get_unchecked_mut(index) };
         if replace(e.entry) {
             *e = CacheTableEntry {
                 hash: hash,

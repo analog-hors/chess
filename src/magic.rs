@@ -2,9 +2,11 @@ use crate::bitboard::{BitBoard, EMPTY};
 use crate::color::Color;
 use crate::file::File;
 use crate::rank::Rank;
-use crate::square::Square;
+use crate::square::{Square, NUM_SQUARES};
 #[cfg(target_feature = "bmi2")]
 use std::arch::x86_64::{_pdep_u64, _pext_u64};
+
+use static_assertions::const_assert;
 
 //TODO remove remaining unsafe blocks in here.
 //the compiler can't elide them, do we take the bounds check anyway?
@@ -25,9 +27,41 @@ pub fn get_rook_rays(sq: Square) -> BitBoard {
     RAYS[ROOK][sq.to_index()]
 }
 
+#[allow(unused)]
+const fn table_access_is_sound(index: usize) -> bool {
+    let mut sq = 0;
+    while sq < NUM_SQUARES {
+        let magic = MAGIC_NUMBERS[index][sq];
+        let max_index = ((magic.magic_number.0 * magic.mask.0) >> magic.rightshift) as usize;
+        if magic.offset as usize + max_index >= MOVES.len() {
+            return false;
+        }
+        sq += 1;
+    }
+    true
+}
+
+#[allow(unused)]
+#[cfg(target_feature = "bmi2")]
+const fn bmi_table_access_is_sound(masks: &[BmiMagic; NUM_SQUARES]) -> bool {
+    let mut sq = 0;
+    while sq < NUM_SQUARES {
+        let bmi2_magic = masks[sq];
+        //Simulate pext on a full bitboard
+        let max_index = ((1u64 << bmi2_magic.blockers_mask.0.count_ones()) - 1) as usize;
+        if bmi2_magic.offset as usize + max_index >= BMI_MOVES.len() {
+            return false;
+        }
+        sq += 1;
+    }
+    true
+}
+
 /// Get the moves for a rook on a particular square, given blockers blocking my movement.
 #[inline]
 pub fn get_rook_moves(sq: Square, blockers: BitBoard) -> BitBoard {
+    const_assert!(table_access_is_sound(ROOK));
+    //SAFETY: Covered by the soundness check above.
     unsafe {
         let magic = MAGIC_NUMBERS[ROOK][sq.to_index()];
         *MOVES.get_unchecked(
@@ -41,6 +75,8 @@ pub fn get_rook_moves(sq: Square, blockers: BitBoard) -> BitBoard {
 #[cfg(target_feature = "bmi2")]
 #[inline]
 pub fn get_rook_moves_bmi(sq: Square, blockers: BitBoard) -> BitBoard {
+    const_assert!(bmi_table_access_is_sound(&ROOK_BMI_MASK));
+    //SAFETY: Covered by the soundness check above.
     unsafe {
         let bmi2_magic = ROOK_BMI_MASK[sq.to_index()];
         let index = (_pext_u64(blockers.0, bmi2_magic.blockers_mask.0) as usize)
@@ -56,6 +92,8 @@ pub fn get_rook_moves_bmi(sq: Square, blockers: BitBoard) -> BitBoard {
 /// Get the moves for a bishop on a particular square, given blockers blocking my movement.
 #[inline]
 pub fn get_bishop_moves(sq: Square, blockers: BitBoard) -> BitBoard {
+    const_assert!(table_access_is_sound(BISHOP));
+    //SAFETY: Covered by the soundness check above.
     unsafe {
         let magic: Magic = MAGIC_NUMBERS[BISHOP][sq.to_index()];
         *MOVES.get_unchecked(
@@ -69,6 +107,8 @@ pub fn get_bishop_moves(sq: Square, blockers: BitBoard) -> BitBoard {
 #[inline]
 #[cfg(target_feature = "bmi2")]
 pub fn get_bishop_moves_bmi(sq: Square, blockers: BitBoard) -> BitBoard {
+    const_assert!(bmi_table_access_is_sound(&BISHOP_BMI_MASK));
+    //SAFETY: Covered by the soundness check above.
     unsafe {
         let bmi2_magic = BISHOP_BMI_MASK[sq.to_index()];
         let index = (_pext_u64(blockers.0, bmi2_magic.blockers_mask.0) as usize)
